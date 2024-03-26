@@ -21,7 +21,7 @@ def get_calender_date(date_string, year):
 
 @pytest.mark.parametrize("value, expected_result",
                          [("1 March", True), ("1", False), ("1 March 2023", False), ("31 June", False),
-                          ("30 June", True)])
+                          ("30 June", True), ("First", False)])
 def test_is_date(value, expected_result):
     assert is_valid_calender_date(value) == expected_result
 
@@ -31,20 +31,27 @@ def extract_dates_from_table(soup, year):
     list_of_text_to_tuple_of_dates(text, year)
 
 
-def list_of_text_to_tuple_of_dates(text, year):
+SCHOOL_OPENS = "School Opens"
+SCHOOL_CLOSES = "School Closes"
+
+
+def list_of_text_to_tuple_of_dates(text: list[str], year: str) -> list[tuple[str, str]]:
     assert len(text) > 0
-    dates = []
+    dates: list[tuple[str, str]] = list()
+    current = SCHOOL_OPENS
     for line in text:
         if is_valid_calender_date(line):
-            dates.append(get_calender_date(line, year).isoformat(sep=' '))
-    it = iter(dates)
-    return list(zip(it, it))
+            cal_date = get_calender_date(line, year).isoformat(sep=' ')
+            dates.append((current, cal_date))
+            current = SCHOOL_CLOSES if current == SCHOOL_OPENS else SCHOOL_OPENS
+    return dates
 
 
-@pytest.mark.parametrize("lines, dates", [(["2 June", "5 August"], [("2026-06-02 00:00:00", "2026-08-05 00:00:00")]),
-                                          (["5 March", "23 May", "3 September", "23 December"],
-                                           [("2026-03-05 00:00:00", "2026-05-23 00:00:00"), ("2026-09-03 00:00:00",
-                                                                                             "2026-12-23 00:00:00")])])
+@pytest.mark.parametrize("lines, dates", [
+    (["2 June", "5 August"], [("School Opens", "2026-06-02 00:00:00"), ("School Closes", "2026-08-05 00:00:00")]),
+    (["5 March", "23 May", "3 September", "23 December"],
+     [("School Opens", "2026-03-05 00:00:00"), ("School Closes", "2026-05-23 00:00:00"), ("School Opens", "2026-09-03 00:00:00"),
+      ("School Closes", "2026-12-23 00:00:00")])])
 def test_list_of_text_to_tuple_of_dates(lines, dates):
     assert list_of_text_to_tuple_of_dates(lines, "2026") == dates
 
