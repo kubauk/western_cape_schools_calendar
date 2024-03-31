@@ -105,7 +105,7 @@ def test_extract_this_years_dates() -> None:
         soup = bs4.BeautifulSoup(input)
         headers = soup.find_all("h5")
         assert len(headers) > 0
-        for header in filter(lambda h: "School Calendar" in h.get_text(), headers):
+        for header in filter(lambda h: "School Calendar:" in h.get_text(), headers):
             table = header.find_next("table")
             with open("{}.html".format(header.get_text()), "w+") as output:
                 output.write(str(table))
