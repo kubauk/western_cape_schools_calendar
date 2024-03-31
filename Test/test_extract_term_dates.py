@@ -1,10 +1,12 @@
 import datetime
 import sys
+from enum import IntEnum
+from typing import List, Tuple, AnyStr, Final
 
 import pytest
 import bs4
 
-A_VALID_YEAR: str = "2026"
+A_VALID_YEAR: Final[str] = "2026"
 
 
 def is_valid_calender_date(possible_date: str) -> bool:
@@ -26,33 +28,69 @@ def test_is_date(value: str, expected_result: str) -> None:
     assert is_valid_calender_date(value) == expected_result
 
 
-def extract_dates_from_table(soup, year: str) -> None:
-    text = soup.get_text(separator='\n', strip=True).splitlines()
-    list_of_text_to_tuple_of_dates(text, year)
+def extract_dates_from_table(soup, year: str) -> list[tuple[str, str]]:
+    found_rows: list[list[str]] = list()
+    for row in soup.select("tr"):
+        found_columns: list[str] = list()
+        for column in row.select("td"):
+            found_columns.append(column.get_text(separator="|", strip=True))
+        found_rows.append(found_columns)
+    return list_of_text_to_tuple_of_dates(found_rows, year)
 
 
-SCHOOL_OPENS = "School Opens"
-SCHOOL_CLOSES = "School Closes"
+class Section(IntEnum):
+    Term = 0
+    Opening = 1
+    Closing = 2
 
 
-def list_of_text_to_tuple_of_dates(text: list[str], year: str) -> list[tuple[str, str]]:
-    assert len(text) > 0
-    dates: list[tuple[str, str]] = list()
-    current = SCHOOL_OPENS
-    for line in text:
-        if is_valid_calender_date(line):
-            cal_date = get_calender_date(line, year).isoformat(sep=' ')
-            dates.append((current, cal_date))
-            current = SCHOOL_CLOSES if current == SCHOOL_OPENS else SCHOOL_OPENS
+TERMS: Final[List[str]] = ['First', 'Second', 'Third', 'Fourth']
+
+
+def is_number_1_or_2(line: AnyStr) -> bool:
+    return "1" == line or "2" == line
+
+
+def list_of_text_to_tuple_of_dates(rows: List[List[AnyStr]], year: AnyStr) -> List[Tuple[AnyStr, AnyStr]]:
+    assert len(rows) > 0
+    dates: List[Tuple[AnyStr, AnyStr]] = []
+    for row in rows:
+        if len(row) > 0 and row[Section.Term] in TERMS:
+            for section in [Section.Opening, Section.Closing]:
+                possible_dates: List[AnyStr] = row[section].split("|")
+                if len(possible_dates) > 1:
+                    while len(possible_dates) > 0:
+                        date: AnyStr = get_calender_date(possible_dates.pop(0), year).isoformat(" ")
+                        number: AnyStr = possible_dates.pop(0)
+                        dates.append(("School {} for {}".format("Opens" if section is Section.Opening else "Closes",
+                                                                "Educators" if number == "1" else "Learners"),
+                                      date))
+                else:
+                    dates.append(("School {}".format("Opens" if section is Section.Opening else "Closes"),
+                                  get_calender_date(possible_dates[0], year).isoformat(" ")))
     return dates
 
 
 @pytest.mark.parametrize("lines, dates", [
-    (["2 June", "5 August"], [("School Opens", "2026-06-02 00:00:00"), ("School Closes", "2026-08-05 00:00:00")]),
-    (["5 March", "23 May", "3 September", "23 December"],
-     [("School Opens", "2026-03-05 00:00:00"), ("School Closes", "2026-05-23 00:00:00"), ("School Opens", "2026-09-03 00:00:00"),
-      ("School Closes", "2026-12-23 00:00:00")])])
-def test_list_of_text_to_tuple_of_dates(lines, dates):
+    ([["First", "2 June", "5 August"]],
+     [("School Opens", "2026-06-02 00:00:00"), ("School Closes", "2026-08-05 00:00:00")]),
+    ([["First", "5 March", "23 May"], ["Second", "3 September", "23 December"]],
+     [("School Opens", "2026-03-05 00:00:00"), ("School Closes", "2026-05-23 00:00:00"),
+      ("School Opens", "2026-09-03 00:00:00"),
+      ("School Closes", "2026-12-23 00:00:00")]),
+    ([["Second", "5 March|1|6 March|2", "23 May"], ["Third", "3 September", "23 December"]],
+     [("School Opens for Educators", "2026-03-05 00:00:00"), ("School Opens for Learners", "2026-03-06 00:00:00"),
+      ("School Closes", "2026-05-23 00:00:00"),
+      ("School Opens", "2026-09-03 00:00:00"),
+      ("School Closes", "2026-12-23 00:00:00")]),
+    ([["Third", "5 March|1|6 March|2", "23 May"], ["Fourth", "3 September", "23 December|2|24 December|1"]],
+     [("School Opens for Educators", "2026-03-05 00:00:00"), ("School Opens for Learners", "2026-03-06 00:00:00"),
+      ("School Closes", "2026-05-23 00:00:00"),
+      ("School Opens", "2026-09-03 00:00:00"),
+      ("School Closes for Learners", "2026-12-23 00:00:00"),
+      ("School Closes for Educators", "2026-12-24 00:00:00")])
+])
+def test_list_of_text_to_tuple_of_dates(lines: List[AnyStr], dates: AnyStr) -> None:
     assert list_of_text_to_tuple_of_dates(lines, "2026") == dates
 
 
@@ -67,19 +105,20 @@ def test_extract_this_years_dates() -> None:
         soup = bs4.BeautifulSoup(input)
         headers = soup.find_all("h5")
         assert len(headers) > 0
-        for header in headers:
-            if "2024 School Calendar" in header.get_text():
-                table = header.find_next("table")
-                with open("{}.html".format(header.get_text()), "w+") as output:
-                    output.write(str(table))
+        for header in filter(lambda h: "School Calendar" in h.get_text(), headers):
+            table = header.find_next("table")
+            with open("{}.html".format(header.get_text()), "w+") as output:
+                output.write(str(table))
 
-                assert table is not None
-                print(table.get_text())
-
-                return
-
-    pytest.fail()
+            assert table is not None
+            print(table.get_text())
 
 
 if __name__ == "__main__":
     pytest.main(sys.argv)
+
+
+@pytest.mark.parametrize("line, expected",
+                         [("a", False), ("12", False), ("1", True), ("2", True), (None, False), ("", False)])
+def test_is_number_1_or_2(line: AnyStr, expected: AnyStr) -> None:
+    assert is_number_1_or_2(line) == expected
