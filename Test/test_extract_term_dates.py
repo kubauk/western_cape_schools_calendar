@@ -1,10 +1,11 @@
 import datetime
+import re
 import sys
 from enum import IntEnum
 from typing import List, Tuple, AnyStr, Final
 
-import pytest
 import bs4
+import pytest
 
 A_VALID_YEAR: Final[str] = "2026"
 
@@ -100,18 +101,38 @@ def test_extract_all_dates_from_sample_table() -> None:
         extract_dates_from_table(soup, "2026")
 
 
+YEAR_REG: Final = re.compile(r"^(?:19|20)\d{2}")
+
+
 def test_extract_this_years_dates() -> None:
     with open("School Calendar and Public Holidays _ Western Cape Education Department.html", "r") as input:
         soup = bs4.BeautifulSoup(input)
         headers = soup.find_all("h5")
         assert len(headers) > 0
-        for header in filter(lambda h: "School Calendar:" in h.get_text(), headers):
-            table = header.find_next("table")
-            with open("{}.html".format(header.get_text()), "w+") as output:
-                output.write(str(table))
+        headers = filter(lambda h: "School Calendar:" in h.get_text(), headers)
+        tables = map(lambda h: (YEAR_REG.search(h.get_text(strip=True)), h.find_next("table")), headers)
+        results = map(lambda y_and_t: extract_dates_from_table(y_and_t[1], y_and_t[0].group()), tables)
+        assert next(results) == [("School Opens for Educators", "2024-01-15 00:00:00"),
+                                 ("School Opens for Learners", "2024-01-17 00:00:00"),
+                                 ("School Closes", "2024-03-20 00:00:00"),
+                                 ("School Opens", "2024-04-03 00:00:00"),
+                                 ("School Closes", "2024-06-14 00:00:00"),
+                                 ("School Opens", "2024-07-09 00:00:00"),
+                                 ("School Closes", "2024-09-20 00:00:00"),
+                                 ("School Opens", "2024-10-01 00:00:00"),
+                                 ("School Closes for Learners", "2024-12-11 00:00:00"),
+                                 ("School Closes for Educators", "2024-12-13 00:00:00")]
 
-            assert table is not None
-            print(table.get_text())
+        assert next(results) == [("School Opens for Educators", "2025-01-13 00:00:00"),
+                                 ("School Opens for Learners", "2025-01-15 00:00:00"),
+                                 ("School Closes", "2025-03-28 00:00:00"),
+                                 ("School Opens", "2025-04-08 00:00:00"),
+                                 ("School Closes", "2025-06-27 00:00:00"),
+                                 ("School Opens", "2025-07-22 00:00:00"),
+                                 ("School Closes", "2025-10-03 00:00:00"),
+                                 ("School Opens", "2025-10-13 00:00:00"),
+                                 ("School Closes for Learners", "2025-12-10 00:00:00"),
+                                 ("School Closes for Educators", "2025-12-12 00:00:00")]
 
 
 if __name__ == "__main__":
