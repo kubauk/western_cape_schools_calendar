@@ -112,6 +112,11 @@ def test_extract_all_dates_from_sample_table() -> None:
 
 YEAR_REG: Final = re.compile(r"^(?:19|20)\d{2}")
 
+@dataclass
+class YearAndTable:
+    year: str
+    table: bs4.Tag
+
 
 def test_extract_this_years_dates() -> None:
     with open("School Calendar and Public Holidays _ Western Cape Education Department.html", "r") as input:
@@ -119,8 +124,8 @@ def test_extract_this_years_dates() -> None:
         headers = soup.find_all("h5")
         assert len(headers) > 0
         headers = filter(lambda h: "School Calendar:" in h.get_text(), headers)
-        tables = map(lambda h: (YEAR_REG.search(h.get_text(strip=True)), h.find_next("table")), headers)
-        results = map(lambda y_and_t: extract_dates_from_table(y_and_t[1], y_and_t[0].group()), tables)
+        tables = map(lambda h: YearAndTable(YEAR_REG.search(h.get_text(strip=True)).group(), h.find_next("table")), headers)
+        results = map(lambda y_and_t: extract_dates_from_table(y_and_t.table, y_and_t.year), tables)
         assert next(results) == [TermEvent("School Opens for Educators", "2024-01-15 00:00:00"),
                                  TermEvent("School Opens for Learners", "2024-01-17 00:00:00"),
                                  TermEvent("School Closes", "2024-03-20 00:00:00"),
