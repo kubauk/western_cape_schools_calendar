@@ -1,8 +1,9 @@
 import datetime
 import re
 import sys
+from dataclasses import dataclass
 from enum import IntEnum
-from typing import List, Tuple, AnyStr, Final
+from typing import List, AnyStr, Final, Sequence
 
 import bs4
 import pytest
@@ -29,7 +30,13 @@ def test_is_date(value: str, expected_result: str) -> None:
     assert is_valid_calender_date(value) == expected_result
 
 
-def extract_dates_from_table(soup, year: str) -> list[tuple[str, str]]:
+@dataclass
+class TermEvent:
+    description: str
+    date: str
+
+
+def extract_dates_from_table(soup, year: str) -> list[TermEvent]:
     found_rows: list[list[str]] = list()
     for row in soup.select("tr"):
         found_columns: list[str] = list()
@@ -52,9 +59,9 @@ def is_number_1_or_2(line: AnyStr) -> bool:
     return "1" == line or "2" == line
 
 
-def list_of_text_to_tuple_of_dates(rows: List[List[AnyStr]], year: AnyStr) -> List[Tuple[AnyStr, AnyStr]]:
+def list_of_text_to_tuple_of_dates(rows: Sequence[Sequence[AnyStr]], year: AnyStr) -> List[TermEvent]:
     assert len(rows) > 0
-    dates: List[Tuple[AnyStr, AnyStr]] = []
+    dates: List[TermEvent] = []
     for row in rows:
         if len(row) > 0 and row[Section.Term] in TERMS:
             for section in [Section.Opening, Section.Closing]:
@@ -63,35 +70,37 @@ def list_of_text_to_tuple_of_dates(rows: List[List[AnyStr]], year: AnyStr) -> Li
                     while len(possible_dates) > 0:
                         date: AnyStr = get_calender_date(possible_dates.pop(0), year).isoformat(" ")
                         number: AnyStr = possible_dates.pop(0)
-                        dates.append(("School {} for {}".format("Opens" if section is Section.Opening else "Closes",
-                                                                "Educators" if number == "1" else "Learners"),
-                                      date))
+                        dates.append(TermEvent("School {} for {}".format("Opens" if section is Section.Opening else "Closes",
+                                                                           "Educators" if number == "1" else "Learners"),
+                                               date))
                 else:
-                    dates.append(("School {}".format("Opens" if section is Section.Opening else "Closes"),
-                                  get_calender_date(possible_dates[0], year).isoformat(" ")))
+                    dates.append(TermEvent("School {}".format("Opens" if section is Section.Opening else "Closes"),
+                                           get_calender_date(possible_dates[0], year).isoformat(" ")))
     return dates
 
 
 @pytest.mark.parametrize("lines, dates", [
     ([["First", "2 June", "5 August"]],
-     [("School Opens", "2026-06-02 00:00:00"), ("School Closes", "2026-08-05 00:00:00")]),
+     [TermEvent("School Opens", "2026-06-02 00:00:00"), TermEvent("School Closes", "2026-08-05 00:00:00")]),
     ([["First", "5 March", "23 May"], ["Second", "3 September", "23 December"]],
-     [("School Opens", "2026-03-05 00:00:00"), ("School Closes", "2026-05-23 00:00:00"),
-      ("School Opens", "2026-09-03 00:00:00"),
-      ("School Closes", "2026-12-23 00:00:00")]),
+     [TermEvent("School Opens", "2026-03-05 00:00:00"), TermEvent("School Closes", "2026-05-23 00:00:00"),
+      TermEvent("School Opens", "2026-09-03 00:00:00"),
+      TermEvent("School Closes", "2026-12-23 00:00:00")]),
     ([["Second", "5 March|1|6 March|2", "23 May"], ["Third", "3 September", "23 December"]],
-     [("School Opens for Educators", "2026-03-05 00:00:00"), ("School Opens for Learners", "2026-03-06 00:00:00"),
-      ("School Closes", "2026-05-23 00:00:00"),
-      ("School Opens", "2026-09-03 00:00:00"),
-      ("School Closes", "2026-12-23 00:00:00")]),
+     [TermEvent("School Opens for Educators", "2026-03-05 00:00:00"),
+      TermEvent("School Opens for Learners", "2026-03-06 00:00:00"),
+      TermEvent("School Closes", "2026-05-23 00:00:00"),
+      TermEvent("School Opens", "2026-09-03 00:00:00"),
+      TermEvent("School Closes", "2026-12-23 00:00:00")]),
     ([["Third", "5 March|1|6 March|2", "23 May"], ["Fourth", "3 September", "23 December|2|24 December|1"]],
-     [("School Opens for Educators", "2026-03-05 00:00:00"), ("School Opens for Learners", "2026-03-06 00:00:00"),
-      ("School Closes", "2026-05-23 00:00:00"),
-      ("School Opens", "2026-09-03 00:00:00"),
-      ("School Closes for Learners", "2026-12-23 00:00:00"),
-      ("School Closes for Educators", "2026-12-24 00:00:00")])
+     [TermEvent("School Opens for Educators", "2026-03-05 00:00:00"),
+      TermEvent("School Opens for Learners", "2026-03-06 00:00:00"),
+      TermEvent("School Closes", "2026-05-23 00:00:00"),
+      TermEvent("School Opens", "2026-09-03 00:00:00"),
+      TermEvent("School Closes for Learners", "2026-12-23 00:00:00"),
+      TermEvent("School Closes for Educators", "2026-12-24 00:00:00")])
 ])
-def test_list_of_text_to_tuple_of_dates(lines: List[AnyStr], dates: AnyStr) -> None:
+def test_list_of_text_to_tuple_of_dates(lines: Sequence[Sequence[AnyStr]], dates: Sequence[TermEvent]) -> None:
     assert list_of_text_to_tuple_of_dates(lines, "2026") == dates
 
 
@@ -112,27 +121,27 @@ def test_extract_this_years_dates() -> None:
         headers = filter(lambda h: "School Calendar:" in h.get_text(), headers)
         tables = map(lambda h: (YEAR_REG.search(h.get_text(strip=True)), h.find_next("table")), headers)
         results = map(lambda y_and_t: extract_dates_from_table(y_and_t[1], y_and_t[0].group()), tables)
-        assert next(results) == [("School Opens for Educators", "2024-01-15 00:00:00"),
-                                 ("School Opens for Learners", "2024-01-17 00:00:00"),
-                                 ("School Closes", "2024-03-20 00:00:00"),
-                                 ("School Opens", "2024-04-03 00:00:00"),
-                                 ("School Closes", "2024-06-14 00:00:00"),
-                                 ("School Opens", "2024-07-09 00:00:00"),
-                                 ("School Closes", "2024-09-20 00:00:00"),
-                                 ("School Opens", "2024-10-01 00:00:00"),
-                                 ("School Closes for Learners", "2024-12-11 00:00:00"),
-                                 ("School Closes for Educators", "2024-12-13 00:00:00")]
+        assert next(results) == [TermEvent("School Opens for Educators", "2024-01-15 00:00:00"),
+                                 TermEvent("School Opens for Learners", "2024-01-17 00:00:00"),
+                                 TermEvent("School Closes", "2024-03-20 00:00:00"),
+                                 TermEvent("School Opens", "2024-04-03 00:00:00"),
+                                 TermEvent("School Closes", "2024-06-14 00:00:00"),
+                                 TermEvent("School Opens", "2024-07-09 00:00:00"),
+                                 TermEvent("School Closes", "2024-09-20 00:00:00"),
+                                 TermEvent("School Opens", "2024-10-01 00:00:00"),
+                                 TermEvent("School Closes for Learners", "2024-12-11 00:00:00"),
+                                 TermEvent("School Closes for Educators", "2024-12-13 00:00:00")]
 
-        assert next(results) == [("School Opens for Educators", "2025-01-13 00:00:00"),
-                                 ("School Opens for Learners", "2025-01-15 00:00:00"),
-                                 ("School Closes", "2025-03-28 00:00:00"),
-                                 ("School Opens", "2025-04-08 00:00:00"),
-                                 ("School Closes", "2025-06-27 00:00:00"),
-                                 ("School Opens", "2025-07-22 00:00:00"),
-                                 ("School Closes", "2025-10-03 00:00:00"),
-                                 ("School Opens", "2025-10-13 00:00:00"),
-                                 ("School Closes for Learners", "2025-12-10 00:00:00"),
-                                 ("School Closes for Educators", "2025-12-12 00:00:00")]
+        assert next(results) == [TermEvent("School Opens for Educators", "2025-01-13 00:00:00"),
+                                 TermEvent("School Opens for Learners", "2025-01-15 00:00:00"),
+                                 TermEvent("School Closes", "2025-03-28 00:00:00"),
+                                 TermEvent("School Opens", "2025-04-08 00:00:00"),
+                                 TermEvent("School Closes", "2025-06-27 00:00:00"),
+                                 TermEvent("School Opens", "2025-07-22 00:00:00"),
+                                 TermEvent("School Closes", "2025-10-03 00:00:00"),
+                                 TermEvent("School Opens", "2025-10-13 00:00:00"),
+                                 TermEvent("School Closes for Learners", "2025-12-10 00:00:00"),
+                                 TermEvent("School Closes for Educators", "2025-12-12 00:00:00")]
 
 
 if __name__ == "__main__":
