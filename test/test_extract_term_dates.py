@@ -1,61 +1,10 @@
-import datetime
-import re
 import sys
-from dataclasses import dataclass
-from enum import IntEnum
-from typing import List, AnyStr, Final, Sequence
+from typing import AnyStr, Sequence
 
-import bs4
 import pytest
 
-
-def get_calender_date(date_string: str, year: str = 2026) -> datetime.datetime:
-    return datetime.datetime.strptime("{} {}".format(date_string, year), "%d %B %Y")
-
-
-@dataclass
-class TermEvent:
-    description: str
-    date: str
-
-
-def extract_dates_from_table(soup, year: str) -> list[TermEvent]:
-    found_rows: list[list[str]] = list()
-    for row in soup.select("tr"):
-        found_columns: list[str] = list()
-        for column in row.select("td"):
-            found_columns.append(column.get_text(separator="|", strip=True))
-        found_rows.append(found_columns)
-    return list_of_text_to_tuple_of_dates(found_rows, year)
-
-
-class Section(IntEnum):
-    Term = 0
-    Opening = 1
-    Closing = 2
-
-
-TERMS: Final[List[str]] = ['First', 'Second', 'Third', 'Fourth']
-
-
-def list_of_text_to_tuple_of_dates(rows: Sequence[Sequence[AnyStr]], year: AnyStr) -> List[TermEvent]:
-    assert len(rows) > 0
-    dates: List[TermEvent] = []
-    for row in rows:
-        if len(row) > 0 and row[Section.Term] in TERMS:
-            for section in [Section.Opening, Section.Closing]:
-                possible_dates: List[AnyStr] = row[section].split("|")
-                if len(possible_dates) > 1:
-                    while len(possible_dates) > 0:
-                        date: AnyStr = get_calender_date(possible_dates.pop(0), year).isoformat(" ")
-                        number: AnyStr = possible_dates.pop(0)
-                        dates.append(TermEvent("School {} for {}".format("Opens" if section is Section.Opening else "Closes",
-                                                                           "Educators" if number == "1" else "Learners"),
-                                               date))
-                else:
-                    dates.append(TermEvent("School {}".format("Opens" if section is Section.Opening else "Closes"),
-                                           get_calender_date(possible_dates[0], year).isoformat(" ")))
-    return dates
+from extract_term_dates import TermEvent, extract_dates_from_table, \
+    list_of_text_to_tuple_of_dates, YEAR_REG, YearAndTable
 
 
 @pytest.mark.parametrize("lines, dates", [
@@ -95,15 +44,6 @@ def test_extract_all_dates_from_sample_table(test_file_soup) -> None:
                       TermEvent('School Opens', '2026-10-01 00:00:00'),
                       TermEvent('School Closes for Learners', '2026-12-11 00:00:00'),
                       TermEvent('School Closes for Educators', '2026-12-13 00:00:00')]
-
-
-YEAR_REG: Final = re.compile(r"^(?:19|20)\d{2}")
-
-
-@dataclass
-class YearAndTable:
-    year: str
-    table: bs4.Tag
 
 
 def test_extract_dates_from_webpage(test_file_soup) -> None:
