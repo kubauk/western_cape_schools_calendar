@@ -27,7 +27,6 @@ class Section(IntEnum):
 
 TERMS: Final[List[str]] = ['First', 'Second', 'Third', 'Fourth']
 
-
 YEAR_REG: Final = re.compile(r"^(?:19|20)\d{2}")
 
 
@@ -52,15 +51,16 @@ def list_of_text_to_tuple_of_dates(rows: Sequence[Sequence[AnyStr]], year: AnySt
         if len(row) > 0 and row[Section.Term] in TERMS:
             for section in [Section.Opening, Section.Closing]:
                 possible_dates: List[AnyStr] = row[section].split("|")
-                if len(possible_dates) > 1:
-                    while len(possible_dates) > 0:
-                        date: AnyStr = get_calender_date(possible_dates.pop(0), year).isoformat(" ")
-                        number: AnyStr = possible_dates.pop(0)
-                        dates.append(
-                            TermEvent("School {} for {}".format("Opens" if section is Section.Opening else "Closes",
-                                                                           "Educators" if number == "1" else "Learners"),
-                                      date))
-                else:
-                    dates.append(TermEvent("School {}".format("Opens" if section is Section.Opening else "Closes"),
-                                           get_calender_date(possible_dates[0], year).isoformat(" ")))
+                educator_version: bool = len(possible_dates) > 1
+
+                while len(possible_dates) > 0:
+                    date: AnyStr = get_calender_date(possible_dates.pop(0), year).isoformat(" ")
+                    number: AnyStr = "" if not educator_version else possible_dates.pop(0)
+                    opens_or_closes = "Opens" if section is Section.Opening else "Closes"
+                    learners_educators_or_empty = "" if not educator_version else (
+                        " for Educators" if number == "1" else " for Learners")
+                    message: str = "School {}{}".format(opens_or_closes, learners_educators_or_empty)
+                    dates.append(TermEvent(message, date))
+
+    assert len(dates) > 0
     return dates
