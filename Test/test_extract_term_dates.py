@@ -84,7 +84,7 @@ def test_list_of_text_to_tuple_of_dates(lines: Sequence[Sequence[AnyStr]], dates
 
 
 def test_extract_all_dates_from_sample_table(test_file_soup) -> None:
-    events = extract_dates_from_table(test_file_soup("2024 School Calendar:.html"), "2026")
+    events = extract_dates_from_table(test_file_soup("test-files/2024 School Calendar:.html"), "2026")
     assert events == [TermEvent('School Opens for Educators', '2026-01-15 00:00:00'),
                       TermEvent('School Opens for Learners', '2026-01-17 00:00:00'),
                       TermEvent('School Closes', '2026-03-20 00:00:00'),
@@ -107,7 +107,7 @@ class YearAndTable:
 
 
 def test_extract_dates_from_webpage(test_file_soup) -> None:
-    soup = test_file_soup("School Calendar and Public Holidays _ Western Cape Education Department.html")
+    soup = test_file_soup("test-files/School Calendar and Public Holidays _ Western Cape Education Department.html")
     headers = soup.find_all("h5")
     assert len(headers) > 0
     headers = filter(lambda h: "School Calendar:" in h.get_text(), headers)
