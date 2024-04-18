@@ -32,7 +32,7 @@ def test_list_of_text_to_tuple_of_dates(lines: Sequence[Sequence[AnyStr]], dates
     assert list_of_text_to_tuple_of_dates(lines, "2026") == dates
 
 
-def test_extract_all_dates_from_sample_table(test_file_soup) -> None:
+def test_extract_all_dates_from_sample_2024_table(test_file_soup) -> None:
     events = extract_dates_from_table(test_file_soup("test-files/2024 School Calendar:.html"), "2026")
     assert events == [TermEvent('School Opens for Educators', '2026-01-15 00:00:00'),
                       TermEvent('School Opens for Learners', '2026-01-17 00:00:00'),
@@ -44,6 +44,20 @@ def test_extract_all_dates_from_sample_table(test_file_soup) -> None:
                       TermEvent('School Opens', '2026-10-01 00:00:00'),
                       TermEvent('School Closes for Learners', '2026-12-11 00:00:00'),
                       TermEvent('School Closes for Educators', '2026-12-13 00:00:00')]
+
+
+def test_extract_all_dates_from_sample_2025_table(test_file_soup) -> None:
+    events = extract_dates_from_table(test_file_soup("test-files/2025 School Calendar:.html"), "2028")
+    assert events == [TermEvent('School Opens for Educators', '2028-01-13 00:00:00'),
+                      TermEvent('School Opens for Learners', '2028-01-15 00:00:00'),
+                      TermEvent('School Closes', '2028-03-28 00:00:00'),
+                      TermEvent('School Opens', '2028-04-08 00:00:00'),
+                      TermEvent('School Closes', '2028-06-27 00:00:00'),
+                      TermEvent('School Opens', '2028-07-22 00:00:00'),
+                      TermEvent('School Closes', '2028-10-03 00:00:00'),
+                      TermEvent('School Opens', '2028-10-13 00:00:00'),
+                      TermEvent('School Closes for Learners', '2028-12-10 00:00:00'),
+                      TermEvent('School Closes for Educators', '2028-12-12 00:00:00')]
 
 
 def test_extract_dates_from_webpage(test_file_soup) -> None:
