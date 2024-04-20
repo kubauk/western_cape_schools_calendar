@@ -34,16 +34,6 @@ def get_calender_date(date_string: str, year: str = 2026) -> datetime.datetime:
     return datetime.datetime.strptime("{} {}".format(date_string, year), "%d %B %Y")
 
 
-def extract_dates_from_table(soup, year: str) -> list[TermEvent]:
-    found_rows: list[list[str]] = list()
-    for row in soup.select("tr"):
-        found_columns: list[str] = list()
-        for column in row.select("td"):
-            found_columns.append(column.get_text(separator="|", strip=True))
-        found_rows.append(found_columns)
-    return list_of_text_to_tuple_of_dates(found_rows, year)
-
-
 def list_of_text_to_tuple_of_dates(rows: Sequence[Sequence[AnyStr]], year: AnyStr) -> List[TermEvent]:
     assert len(rows) > 0
     dates: List[TermEvent] = []
@@ -64,3 +54,22 @@ def list_of_text_to_tuple_of_dates(rows: Sequence[Sequence[AnyStr]], year: AnySt
 
     assert len(dates) > 0
     return dates
+
+
+def extract_dates_from_table(soup, year: str) -> list[TermEvent]:
+    found_rows: list[list[str]] = list()
+    for row in soup.select("tr"):
+        found_columns: list[str] = list()
+        for column in row.select("td"):
+            found_columns.append(column.get_text(separator="|", strip=True))
+        found_rows.append(found_columns)
+    return list_of_text_to_tuple_of_dates(found_rows, year)
+
+
+def extract_events_from_web_page(soup):
+    headers = soup.find_all("h5")
+    assert len(headers) > 0
+    headers = filter(lambda h: "School Calendar:" in h.get_text(), headers)
+    tables = map(lambda h: YearAndTable(YEAR_REG.search(h.get_text(strip=True)).group(), h.find_next("table")), headers)
+    results = map(lambda y_and_t: extract_dates_from_table(y_and_t.table, y_and_t.year), tables)
+    return results
