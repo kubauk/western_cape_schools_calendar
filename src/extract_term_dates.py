@@ -1,8 +1,10 @@
 import datetime
 import http.client
+import logging
 import re
 from dataclasses import dataclass
 from enum import IntEnum
+from logging import Logger
 from typing import Final, List, Sequence, AnyStr, Iterator
 
 import bs4
@@ -30,12 +32,15 @@ TERMS: Final[List[str]] = ['First', 'Second', 'Third', 'Fourth']
 
 YEAR_REG: Final = re.compile(r"^(?:19|20)\d{2}")
 
+logger: Final[Logger] = logging.getLogger(__name__)
+
 
 def get_calender_date(date_string: str, year: str = 2026) -> datetime.datetime:
     return datetime.datetime.strptime("{} {}".format(date_string, year), "%d %B %Y")
 
 
 def list_of_text_to_tuple_of_dates(rows: Sequence[Sequence[AnyStr]], year: AnyStr) -> List[TermEvent]:
+    logger.info("Converting extract table date into list of term dates")
     assert len(rows) > 0
     dates: List[TermEvent] = []
     for row in rows:
@@ -58,6 +63,7 @@ def list_of_text_to_tuple_of_dates(rows: Sequence[Sequence[AnyStr]], year: AnySt
 
 
 def extract_dates_from_table(soup, year: str) -> list[TermEvent]:
+    logger.info("Extracting term dates from a single table")
     assert soup is not None
     assert year is not None and year != ""
     found_rows: list[list[str]] = list()
@@ -71,6 +77,7 @@ def extract_dates_from_table(soup, year: str) -> list[TermEvent]:
 
 
 def extract_dates_from_html_soup(soup) -> Iterator[List[TermEvent]]:
+    logger.info("Extracting term dates from html soup")
     assert soup is not None
     headers = soup.find_all("h5")
     assert len(headers) > 0
@@ -81,5 +88,6 @@ def extract_dates_from_html_soup(soup) -> Iterator[List[TermEvent]]:
 
 
 def extract_events_from_web_page(http_response: http.client.HTTPResponse) -> Iterator[List[TermEvent]]:
+    logger.info("Extracting term dates from webpage response")
     assert http_response is not None
     return extract_dates_from_html_soup(bs4.BeautifulSoup(http_response, "html.parser"))
