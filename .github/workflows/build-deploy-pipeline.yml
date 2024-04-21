@@ -1,0 +1,17 @@
+name: "Western Cape Schools Calendar Build & Deploy Pipeline"
+on: [push, pull_request]
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+      - uses: falti/dotenv-action@v1
+        with:
+          export-variables: true
+          keys-case: bypass
+      - run: python3 -m pip install -r requirements.txt
+      - run: python3 -m pytest

@@ -4,7 +4,7 @@ from typing import AnyStr, Sequence
 import pytest
 
 from extract_term_dates import TermEvent, extract_dates_from_table, \
-    list_of_text_to_tuple_of_dates, extract_events_from_web_page, extract_dates_from_html_soup
+    list_of_text_to_tuple_of_dates, extract_dates_from_html_soup
 
 
 @pytest.mark.parametrize("lines, dates", [
