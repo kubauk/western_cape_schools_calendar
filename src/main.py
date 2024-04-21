@@ -6,7 +6,6 @@ from urllib import request
 
 import ics
 from google.cloud import storage
-
 from extract_term_dates import extract_events_from_web_page
 
 logger: Final[Logger] = logging.getLogger(__name__)
