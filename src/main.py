@@ -23,6 +23,8 @@ def save_to_cloud_storage(ics_calendar):
     bucket = client.get_bucket("school_ics_calendars")
     blob = bucket.blob("western_cape_schools_calendar.ics")
     blob.upload_from_string(ics_calendar.serialize())
+    blob.make_public()
+    return blob.public_url
 
 
 def main():
@@ -31,7 +33,8 @@ def main():
 
     ics_calendar = create_ics_for_dates(date_event_years)
 
-    save_to_cloud_storage(ics_calendar)
+    calendar_url = save_to_cloud_storage(ics_calendar)
+    print(calendar_url)
 
 
 if __name__ == "__main__":
