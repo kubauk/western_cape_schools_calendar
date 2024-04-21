@@ -1,8 +1,9 @@
 import datetime
+import http.client
 import re
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Final, List, Sequence, AnyStr
+from typing import Final, List, Sequence, AnyStr, Iterator
 
 import bs4
 
@@ -69,7 +70,7 @@ def extract_dates_from_table(soup, year: str) -> list[TermEvent]:
     return list_of_text_to_tuple_of_dates(found_rows, year)
 
 
-def extract_dates_from_html_soup(soup):
+def extract_dates_from_html_soup(soup) -> Iterator[List[TermEvent]]:
     assert soup is not None
     headers = soup.find_all("h5")
     assert len(headers) > 0
@@ -79,6 +80,6 @@ def extract_dates_from_html_soup(soup):
     return results
 
 
-def extract_events_from_web_page(http_response):
+def extract_events_from_web_page(http_response: http.client.HTTPResponse) -> Iterator[List[TermEvent]]:
     assert http_response is not None
     return extract_dates_from_html_soup(bs4.BeautifulSoup(http_response, "html.parser"))

@@ -5,7 +5,7 @@ import ics
 from extract_term_dates import extract_events_from_web_page
 
 
-def create_ics_for_dates(date_event_years):
+def create_ics_for_dates(date_event_years) -> ics.Calendar:
     cal = ics.Calendar()
 
     for date_year in date_event_years:
@@ -13,6 +13,8 @@ def create_ics_for_dates(date_event_years):
             cal_event = ics.Event(name=event.description, begin=event.date)
             cal_event.make_all_day()
             cal.events.add(cal_event)
+
+    return cal
 
 
 def main():
