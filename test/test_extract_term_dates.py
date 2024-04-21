@@ -4,7 +4,7 @@ from typing import AnyStr, Sequence
 import pytest
 
 from extract_term_dates import TermEvent, extract_dates_from_table, \
-    list_of_text_to_tuple_of_dates, extract_events_from_web_page
+    list_of_text_to_tuple_of_dates, extract_events_from_web_page, extract_dates_from_html_soup
 
 
 @pytest.mark.parametrize("lines, dates", [
@@ -62,7 +62,7 @@ def test_extract_all_dates_from_sample_2025_table(test_file_soup) -> None:
 
 def test_extract_dates_from_webpage(test_file_soup) -> None:
     soup = test_file_soup("test-files/School Calendar and Public Holidays _ Western Cape Education Department.html")
-    results = extract_events_from_web_page(soup)
+    results = extract_dates_from_html_soup(soup)
     assert next(results) == [TermEvent("School Opens for Educators", "2024-01-15 00:00:00"),
                              TermEvent("School Opens for Learners", "2024-01-17 00:00:00"),
                              TermEvent("School Closes", "2024-03-20 00:00:00"),

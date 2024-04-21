@@ -57,19 +57,28 @@ def list_of_text_to_tuple_of_dates(rows: Sequence[Sequence[AnyStr]], year: AnySt
 
 
 def extract_dates_from_table(soup, year: str) -> list[TermEvent]:
+    assert soup is not None
+    assert year is not None and year != ""
     found_rows: list[list[str]] = list()
     for row in soup.select("tr"):
         found_columns: list[str] = list()
         for column in row.select("td"):
             found_columns.append(column.get_text(separator="|", strip=True))
         found_rows.append(found_columns)
+    assert len(found_rows) > 0
     return list_of_text_to_tuple_of_dates(found_rows, year)
 
 
-def extract_events_from_web_page(soup):
+def extract_dates_from_html_soup(soup):
+    assert soup is not None
     headers = soup.find_all("h5")
     assert len(headers) > 0
     headers = filter(lambda h: "School Calendar:" in h.get_text(), headers)
     tables = map(lambda h: YearAndTable(YEAR_REG.search(h.get_text(strip=True)).group(), h.find_next("table")), headers)
     results = map(lambda y_and_t: extract_dates_from_table(y_and_t.table, y_and_t.year), tables)
     return results
+
+
+def extract_events_from_web_page(http_response):
+    assert http_response is not None
+    return extract_dates_from_html_soup(bs4.BeautifulSoup(http_response, "html.parser"))
