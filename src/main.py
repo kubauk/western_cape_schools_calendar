@@ -1,3 +1,4 @@
+import datetime
 import logging
 import sys
 from logging import Logger
@@ -20,6 +21,12 @@ def create_ics_for_dates(date_event_years) -> ics.Calendar:
             cal_event = ics.Event(name=event.description, begin=event.date)
             cal_event.make_all_day()
             ics_calendar.events.add(cal_event)
+
+    now = datetime.datetime.now()
+    tomorrow = now + datetime.timedelta(days=1)
+    generated_date_event = ics.Event(name="Term Calendar Updated", begin=tomorrow, description=now.isoformat(" "))
+    generated_date_event.make_all_day()
+    ics_calendar.events.add(generated_date_event)
 
     return ics_calendar
 
