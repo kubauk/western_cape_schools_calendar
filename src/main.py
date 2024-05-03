@@ -33,9 +33,14 @@ def create_ics_for_dates(date_event_years) -> ics.Calendar:
 
 def save_to_cloud_storage(ics_calendar):
     logger.info("Saving calendar to storage")
+    save_public_file_to_cloud_storage(ics_calendar, "western_cape_schools_calendar{}.ics".format(datetime.datetime.now().isoformat(" ")))
+    return save_public_file_to_cloud_storage(ics_calendar, "western_cape_schools_calendar.ics")
+
+
+def save_public_file_to_cloud_storage(ics_calendar, object_name):
     client = storage.Client(project="western-cape-schools-calendar")
     bucket = client.get_bucket("school_ics_calendars")
-    blob = bucket.blob("western_cape_schools_calendar.ics")
+    blob = bucket.blob(object_name)
     blob.upload_from_string(ics_calendar.serialize())
     blob.make_public()
     return blob.public_url
