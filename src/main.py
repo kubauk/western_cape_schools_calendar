@@ -16,9 +16,12 @@ def create_ics_for_dates(date_event_years) -> ics.Calendar:
     logger.info("Creating ICS calendar")
     ics_calendar = ics.Calendar()
 
+    update_date = datetime.datetime.now().isoformat(" ")
+
     for date_year in date_event_years:
         for event in date_year:
             cal_event = ics.Event(name=event.description, begin=event.date)
+            cal_event.description = "Calendar events were updated {}".format(update_date)
             cal_event.make_all_day()
             ics_calendar.events.add(cal_event)
 
