@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import logging
 import sys
 from logging import Logger
@@ -12,6 +13,10 @@ from extract_term_dates import extract_events_from_web_page
 logger: Final[Logger] = logging.getLogger(__name__)
 
 
+def uid_for(event):
+    return hashlib.sha256("{}{}".format(event.description, event.date).encode("utf-8")).hexdigest() + "@WCCal"
+
+
 def create_ics_for_dates(date_event_years) -> ics.Calendar:
     logger.info("Creating ICS calendar")
     ics_calendar = ics.Calendar()
@@ -20,7 +25,7 @@ def create_ics_for_dates(date_event_years) -> ics.Calendar:
 
     for date_year in date_event_years:
         for event in date_year:
-            cal_event = ics.Event(name=event.description, begin=event.date)
+            cal_event = ics.Event(name=event.description, begin=event.date, uid=uid_for(event))
             cal_event.description = "Calendar events were updated {}".format(update_date)
             cal_event.make_all_day()
             ics_calendar.events.add(cal_event)
